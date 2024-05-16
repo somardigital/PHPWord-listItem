@@ -24,20 +24,45 @@ namespace PhpOffice\PhpWord\Writer\HTML\Element;
  */
 class ListItemRun extends TextRun
 {
-    /**
-     * Write list item.
-     *
-     * @return string
-     */
     public function write()
     {
         if (!$this->element instanceof \PhpOffice\PhpWord\Element\ListItemRun) {
             return '';
         }
+        $content = '';
+        $content .= sprintf(
+            '<li data-depth="%s" data-liststyle="%s" data-numId="%s">',
+            $this->element->getDepth(),
+            $this->getListFormat($this->element->getDepth()),
+            $this->getListId()
+        );
 
-        $writer = new Container($this->parentWriter, $this->element);
-        $content = $writer->write() . PHP_EOL;
+        $namespace = 'PhpOffice\\PhpWord\\Writer\\HTML\\Element';
+        $container = $this->element;
 
+        $elements = $container->getElements();
+        foreach ($elements as $element) {
+            $elementClass = get_class($element);
+            $writerClass = str_replace('PhpOffice\\PhpWord\\Element', $namespace, $elementClass);
+            if (class_exists($writerClass)) {
+                /** @var \PhpOffice\PhpWord\Writer\HTML\Element\AbstractElement $writer Type hint */
+                $writer = new $writerClass($this->parentWriter, $element, true);
+                $content .= $writer->write();
+            }
+        }
+
+        $content .= '</li>';
+        $content .= "\n";
         return $content;
+    }
+
+    public function getListFormat($depth)
+    {
+        return $this->element->getStyle()->getNumStyle();
+    }
+
+    public function getListId()
+    {
+        return $this->element->getStyle()->getNumId();
     }
 }
